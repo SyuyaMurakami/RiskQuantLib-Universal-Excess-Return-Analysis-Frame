@@ -5,7 +5,19 @@
 
 `getRQL RiskQuantLib-Universal-Excess-Return-Analysis-Frame`
 
-进行安装
+进行安装，之后使用如下代码来进行解压：
+
+`tplRQL RiskQuantLib-Universal-Excess-Return-Analysis-Frame yourTargetPath`
+
+**在运行代码前，必须在项目根目录，使用如下代码进行项目构建：**
+
+`python build.py`
+
+对于windows系统，也可以双击build.bat来进行构建。
+
+**参考RiskQuantLib文档来更好地了解RiskQuantLib脚手架的衍生项目：** 
+英文版：https://riskquantlib-doc.readthedocs.io/en/latest/index.html
+中文版：https://riskquantlib-doc.readthedocs.io/zh-cn/latest/index.html
 
 ## 使用
 
