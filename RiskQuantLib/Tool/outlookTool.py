@@ -1,12 +1,13 @@
 #!/usr/bin/python
 #coding = utf-8
 
-
 import os,re
 from win32com import client as win32  # outlook control module
 from win32com.client.gencache import EnsureDispatch as Dispatch  # read mail module
+#<import>
+#</import>
 
-class readMailFromOutlook():
+class readMailFromOutlook(object):
     """
     This class is used to control Outlook App in windows.
     Due to the difference of version of win32.com module, this class may not perform well.
@@ -81,7 +82,10 @@ class readMailFromOutlook():
         self.mail = result
         return result
 
-class sendMailFromOutlook():
+    #<readMailFromOutlook>
+    #</readMailFromOutlook>
+
+class sendMailFromOutlook(object):
     """
     This class is used to send mails by outlook.
     """
@@ -102,7 +106,8 @@ class sendMailFromOutlook():
             pass
         mail_item.Send()  # send it.
 
-
+    #<sendMailFromOutlook>
+    #</sendMailFromOutlook>
 
 
 

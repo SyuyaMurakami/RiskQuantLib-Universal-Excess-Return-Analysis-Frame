@@ -12,7 +12,7 @@
 ### 录入信息
 
 首先录入持仓信息和持仓的每日涨跌幅，打开Data文件夹中的**holding.xlsx**文件，编辑在不同日期的持仓，tradingDate是持仓的日期，
-belongTo是属于哪个组合，code是持仓证券的代码，name是持仓证券的名称，weight是持仓证券在该组合中的权重，rtn是持仓证券在当日的涨跌。
+belongTo是属于哪个组合，codeSec是持仓证券的代码，nameSec是持仓证券的名称，weight是持仓证券在该组合中的权重，rtn是持仓证券在当日的涨跌。
 industry是持仓证券的行业。
 
 要进行行业归因，必须要填写行业因子。
@@ -23,9 +23,11 @@ industry是持仓证券的行业。
 
 ### 在录入信息时增加新的归因因子
 
-您也可以在**holding.xlsx**文件中新增其他的列，但您需要将列名保持为英文，并在**Build_Attr.xlsx**中注册列名。
-具体的注册方式为打开**Build_Attr.xlsx**，将新的列名填入AttrName栏，并将Security列填写为Stock（S必须大写），
-AttrType可以填写Any，String，Number其中之一（首字母必须大写）。
+您也可以在**holding.xlsx**文件中新增其他的列，但您需要将列名保持为英文，并在**Src/config.py**中注册列名。
+具体的注册方式为打开**Src/config.py**，在最后新增：
+
+`#-|attribute: stock.yourOwnColumn1, stock.yourOwnColumn2`
+  
 
 之后您需要运行**build.py**来使得注册生效。
 
@@ -39,7 +41,7 @@ AttrType可以填写Any，String，Number其中之一（首字母必须大写）
 `fund_list.addSubPortfolioByBenchmark('industry')`
 
 您可以通过更改**addSubPortfolioByAttr**函数里的参数来选择如何进行子组合的划分，Brinson归因中默认使用行业，
-您可以更改为任何您想使用的因子，这个因子的名称即是您在**Build_Attr.xlsx**中注册的列名。
+您可以更改为任何您想使用的因子，这个因子的名称即是您在**Src/config.py**中注册的列名。
 
 
 ### 行业归因
@@ -54,7 +56,7 @@ AttrType可以填写Any，String，Number其中之一（首字母必须大写）
 `fund_list.calSubPortfolioBreakDown(['金融','冶金','机械制造','能源','电子'])`
 
 您可以通过更改**addSubPortfolioByAttr**函数里的参数来选择如何进行子组合的划分，行业归因中默认使用行业，
-您可以更改为任何您想使用的因子，这个因子的名称即是您在Build_Attr.xlsx中注册的列名。
+您可以更改为任何您想使用的因子，这个因子的名称即是您在**Src/config.py**中注册的列名。
 
 您需要在**calSubPortfolioBreakDown**函数的参数中声明因子的值，未声明的因子将不会参与到归因中。以行业因子为例，
 行业因子的值的种类有很多，这里传入了 **['金融','冶金','机械制造','能源','电子']** 作为参与归因的种类。

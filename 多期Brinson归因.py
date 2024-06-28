@@ -7,7 +7,7 @@ import sys
 import numpy as np
 import pandas as pd
 
-from RiskQuantLib.Module import *
+from RiskQuantLib.module import *
 path = sys.path[0]
 
 # 多期brinson归因
