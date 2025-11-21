@@ -27,7 +27,7 @@ def addHoldingSeries(self, holdingList):
 
 def calRTN(self):
     self.weight = np.nansum(self.holdings['weight'])
-    self.rtn = np.nansum([w*r for w,r in zip(self.holdings['weight'],self.holdings['rtn'])])/self.weight if (not np.isnan(self.weight)) and self.weight!=0.0 else np.nanmean(self.holdings['rtn'])
+    self.rtn = np.nansum([w*r for w,r in zip(self.holdings['weight'],self.holdings['rtn'])])/self.weight if (not np.isnan(self.weight)) and self.weight!=0.0 else np.nanmean(self.holdings['rtn']) if len(self.holdings)!=0 else np.nan
 
 #->subPortfolioList@add
 def addSubPortfolio(self,codeString,nameString,instrumentTypeString = 'SubPortfolio'):
