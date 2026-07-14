@@ -1,13 +1,25 @@
 # Brinson业绩归因以及行业业绩归因
 ## 安装
 
-本项目基于RiskQuantLib进行二次开发，便于进行Brinson归因，因子归因和行业归因。 安装RiskQuantLib后，使用：
+本项目基于RiskQuantLib进行二次开发，便于进行Brinson归因，因子归因和行业归因。
+
+使用pip命令安装RiskQuantLib：
+
+`pip install RiskQuantLib --upgrade`
+
+安装RiskQuantLib后，使用：
 
 `getRQL RiskQuantLib-Universal-Excess-Return-Analysis-Frame`
 
 进行安装，之后使用如下代码来进行解压：
 
-`tplRQL RiskQuantLib-Universal-Excess-Return-Analysis-Frame yourTargetPath`
+`tplRQL template RiskQuantLib-Universal-Excess-Return-Analysis-Frame yourTargetPath`
+
+之后使用cd命令切换至项目根目录，也就是RiskQuantLib文件夹和Src文件夹所在目录：
+
+`cd yourTargetPath/yourSubDirectory`
+
+您也可以跳过上述过程，直接在Github页面右上角点击下载Zip压缩包，并解压，进入根目录。
 
 **在运行代码前，必须在项目根目录，使用如下代码进行项目构建：**
 
