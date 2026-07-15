@@ -116,7 +116,7 @@ def addPortfolioFromHolding(self, holdingList):
         tmpObj = self.new()
         tmpObj.setAll(holdingList)
         tmpObj = tmpObj.groupBy('belongTo')
-    securitySeries = [self.elementClass(i, i).initHold() for i in tmpObj['belongTo']]
+    securitySeries = [self.__elementClass__(i, i).initHold() for i in tmpObj['belongTo']]
     [port.addHoldingSeries(holding) for port,holding in zip(securitySeries,tmpObj)]
     self.setAll(self.all + securitySeries)
 

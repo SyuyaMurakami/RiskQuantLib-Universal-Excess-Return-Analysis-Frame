@@ -31,11 +31,11 @@ def calRTN(self):
 
 #->subPortfolioList@add
 def addSubPortfolio(self,codeString,nameString,instrumentTypeString = 'SubPortfolio'):
-    tmpList = self.all+[self.elementClass(codeString,nameString,instrumentTypeString).initHold()]
+    tmpList = self.all+[self.__elementClass__(codeString,nameString,instrumentTypeString).initHold()]
     self.setAll(tmpList)
 
 #->subPortfolioList@addSeries
 def addSubPortfolioSeries(self,subPortfolioCodeSeries,subPortfolioNameSeries,instrumentTypeString = 'SubPortfolio'):
-    subPortfolioSeries = [self.elementClass(i,j,instrumentTypeString).initHold() for i,j in zip(subPortfolioCodeSeries,subPortfolioNameSeries)]
+    subPortfolioSeries = [self.__elementClass__(i,j,instrumentTypeString).initHold() for i,j in zip(subPortfolioCodeSeries,subPortfolioNameSeries)]
     tmpList = self.all + subPortfolioSeries
     self.setAll(tmpList)

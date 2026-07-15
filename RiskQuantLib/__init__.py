@@ -1,6 +1,6 @@
 #!/usr/bin/python
 #coding = utf-8
-import sys,argparse
+import argparse
 
 def initiateBuildFile():
     """
@@ -15,12 +15,12 @@ def initiateBuildFile():
     PYB : pythonScriptBuilder
 
     """
-    from RiskQuantLib.Tool.codeBuilderTool import pythonScriptBuilder, codeBuilder
+    from RiskQuantLib.Tool.codeTool import pythonScriptBuilder, codeBuilderPython
     PYB = pythonScriptBuilder()
     PYB.setTitle()
     PYB.setImport('os,sys,argparse')
     PYB.setImport('RiskQuantLib','',True,'autoBuildProject,buildProject')
-    PYB.code = codeBuilder(indent=0)
+    PYB.code = codeBuilderPython(indent=0)
     PYB.code.addLine(r'path = sys.path[0] if not getattr(sys, "frozen", False) else os.path.dirname(sys.executable)')
     PYB.code.addLine(r'parser = argparse.ArgumentParser()')
     PYB.code.addLine(r'parser.add_argument("-a","--auto", help="use auto build model to build project dynamically", action="store_true")')
@@ -28,11 +28,12 @@ def initiateBuildFile():
     PYB.code.addLine(r'parser.add_argument("-r", "--renderFromPath", type=str, help="the directory of source code where the template code exists")')
     PYB.code.addLine(r'parser.add_argument("-c", "--channel", type=str, help="if given a channel name, render action in this channel will not delete the result of render in other channel unless it is overwritten by current render")')
     PYB.code.addLine(r'parser.add_argument("-d", "--debug", help="use debug mode, break point in Src will start to effect", action="store_true")')
+    PYB.code.addLine(r'parser.add_argument("-f", "--force", help="force to build, cached building information will be neglected, if auto-build mode is on, building information will be deleted for one time before auto-building", action="store_true")')
     PYB.code.addLine(r'args = parser.parse_args()')
     PYB.code.addLine(r'targetPath = args.targetPath if args.targetPath else path')
     PYB.code.addLine(r'renderFromPath = args.renderFromPath if args.renderFromPath else targetPath+os.sep+"Src"')
     PYB.code.addLine(r'bindType = args.channel if args.channel else "renderedSourceCode"')
-    PYB.code.addLine(r'autoBuildProject(targetPath,renderFromPath,bindType,args.debug) if args.auto else buildProject(targetPath,renderFromPath,bindType,args.debug)')
+    PYB.code.addLine(r'autoBuildProject(targetPath,renderFromPath,bindType,args.debug,args.force) if args.auto else buildProject(targetPath,renderFromPath,bindType,args.debug,args.force)')
     return PYB
 
 def initiateMainFile():
@@ -47,12 +48,12 @@ def initiateMainFile():
     PYB : pythonScriptBuilder
 
     """
-    from RiskQuantLib.Tool.codeBuilderTool import pythonScriptBuilder, codeBuilder
+    from RiskQuantLib.Tool.codeTool import pythonScriptBuilder, codeBuilderPython
     PYB = pythonScriptBuilder()
     PYB.setTitle()
     PYB.setImport('os,sys')
     PYB.setImport('RiskQuantLib.module','',True,'*')
-    PYB.code = codeBuilder(indent=0)
+    PYB.code = codeBuilderPython(indent=0)
     PYB.code.addLine(r'path = sys.path[0] if not getattr(sys, "frozen", False) else os.path.dirname(sys.executable)')
     PYB.code.addLine('print("Write Your Code Here : "+path+os.sep+"main.py")')
     return PYB
@@ -70,10 +71,10 @@ def initiateConfigFile():
     PYB : pythonScriptBuilder
 
     """
-    from RiskQuantLib.Tool.codeBuilderTool import pythonScriptBuilder, codeBuilder
+    from RiskQuantLib.Tool.codeTool import pythonScriptBuilder, codeBuilderPython
     PYB = pythonScriptBuilder()
     PYB.setTitle()
-    PYB.code = codeBuilder(indent=0)
+    PYB.code = codeBuilderPython(indent=0)
     PYB.code.addLine('')
     PYB.code.addLine(r'#-|instrument: security, company, index, interest')
     PYB.code.addLine(r'#-|instrument: bond@security, stock@security, derivative@security, fund@security')
@@ -97,9 +98,9 @@ def initiateExecutableBuildShortcutFile():
 
     """
     import sys
-    from RiskQuantLib.Tool.codeBuilderTool import pythonScriptBuilder, codeBuilder
+    from RiskQuantLib.Tool.codeTool import pythonScriptBuilder, codeBuilderPython
     PYB = pythonScriptBuilder()
-    PYB.code = codeBuilder(indent=0)
+    PYB.code = codeBuilderPython(indent=0)
     if sys.platform in {'win32'}:
         PYB.code.addLine(r'''cd %~dp0''')
         PYB.code.addLine(r'''python build.py''')
@@ -126,9 +127,9 @@ def initiateExecutableDebugShortcutFile():
 
     """
     import sys
-    from RiskQuantLib.Tool.codeBuilderTool import pythonScriptBuilder, codeBuilder
+    from RiskQuantLib.Tool.codeTool import pythonScriptBuilder, codeBuilderPython
     PYB = pythonScriptBuilder()
-    PYB.code = codeBuilder(indent=0)
+    PYB.code = codeBuilderPython(indent=0)
     if sys.platform in {'win32'}:
         PYB.code.addLine(r'''cd %~dp0''')
         PYB.code.addLine(r'''python build.py -a -d''')
@@ -173,7 +174,7 @@ def parseBuildPath(targetPath: str, checkExist:bool = False):
         raise Exception("The target directory should be a RiskQuantLib project, with directory named as RiskQuantLib and config.py in it!")
     return rqlPath, configFilePath, buildCachePath
 
-def buildProjectFromConfig(targetPath: str, buildCachePath: str, configFilePath:str, renderFromPath: str, bindType: str = 'renderedSourceCode', debug: bool = False):
+def buildProjectFromConfig(targetPath: str, buildCachePath: str, configFilePath:str, renderFromPath: str, bindType: str = 'renderedSourceCode', debug: bool = False, force: bool = False):
     """
     buildProjectFromConfig() is a function to build project according to config.py declaration.
 
@@ -200,6 +201,13 @@ def buildProjectFromConfig(targetPath: str, buildCachePath: str, configFilePath:
         specified class. This mode is useful when your code is still under development. You will not have to change between
         ./Src/somecode.py and target instrument class .py file to edit any code error. The break point will stop right
         under ./Src/somecode.py.
+    force : bool
+        If True, the cached building file buildInfo.pkl will be neglected, a new builder object will be created.
+        This is useful when there are some mistakes in buildInfo.pkl, or error happens when caching buildInfo.pkl.
+        In these cases, old buildInfo.pkl exists but can not be used. The traditional way to solve this problem is manually
+        deleting this file and build whole project again. With this parameter specified as True, users can choose to build
+        project no matter buildInfo.pkl exists or not. However, any information in old building will be deleted. If you use
+        guardian projects, there could be problems, you will have to build all guardian projects again.
 
     Returns
     -------
@@ -208,7 +216,7 @@ def buildProjectFromConfig(targetPath: str, buildCachePath: str, configFilePath:
     """
     import os, time
     from RiskQuantLib.Build.builder import configBuilder
-    if os.path.isfile(buildCachePath):
+    if os.path.isfile(buildCachePath) and not force:
         buildObj = configBuilder.loadInfo(buildCachePath)
     else:
         buildObj = configBuilder(targetProjectPath=targetPath)
@@ -257,7 +265,6 @@ def newProject(targetPath:str = ''):
     shutil.copytree(sourcePath, rqlPath)
 
     # create config.py for build
-    from RiskQuantLib.Tool.codeBuilderTool import pythonScriptBuilder, codeBuilder
     PYB = initiateConfigFile()
     PYB.writeToFile(configFilePath)
 
@@ -290,56 +297,78 @@ def newProject(targetPath:str = ''):
     print('RiskQuantLib project created!')
 
 
-def packProject(targetPath:str = '', targetName:str = ''):
+def packModule(targetPath: str = '', targetName: str = '', keepTop: bool = False):
     """
-    packProject() is a function to pack a RiskQuantLib project into '.zip' file.
+    packModule() is a function to pack a RiskQuantLib project into '.zip' file.
 
     Use terminal command 'pkgRQL' to use this function.
     The terminal command 'pkgRQL' accept a parameter 'targetPathString',
-    which is the RiskQuantLib project path that you want to package.
+    which is the path that you want to package.
     It doesn't need to have a directory named 'RiskQuantLib' to be packaged.
 
     Parameters
     ----------
     targetPath : str
-        A terminal command parameter, specify the RiskQuantLib project path which you want to package.
+        A terminal command parameter, specify the path which you want to package.
     targetName : str
-        A terminal command parameter, specify the name you want to mark the project zip file with.
+        A terminal command parameter, specify the name you want to mark the zip file with.
+    keepTop : bool
+        A terminal command parameter, specify if this function will keep the top level directory.
+
 
     Returns
     -------
     None
     """
-    if targetPath == '' and targetName == '':
+    if targetPath == '' and targetName == '' and not keepTop:
         parser = argparse.ArgumentParser()
-        parser.add_argument("target", type=str, help="the RiskQuantLib project which you want to package into a zip file")
-        parser.add_argument("-n", "--name", type=str, help="the name which you want to name the project by")
+        parser.add_argument("target", type=str, help="the file or directory which you want to package into a zip file")
+        parser.add_argument("-n", "--name", type=str, help="the name which you want to name the module by")
+        parser.add_argument("-t", "--top", help="keep top level directory", action="store_true")
         args = parser.parse_args()
         targetPath = args.target
         targetName = args.name if args.name else ''
+        keepTop = args.top
 
     import os, shutil, logging
-    if targetName=='':
-        name = targetPath.split(os.sep)[-1]
+    if targetName == '':
+        name = os.path.splitext(os.path.basename(targetPath))[0]
     else:
         nameList = targetName.split('.')
         if len(nameList)>1:
             name = "".join(nameList[0:-1])
         else:
             name = nameList[0]
-    parentProjectPath = os.path.dirname(targetPath)
+    parentDirectory = os.path.dirname(targetPath)
     logger = logging.getLogger("nameOfTheLogger")
     ConsoleOutputHandler = logging.StreamHandler()
     formatter = logging.Formatter('%(asctime)s - %(message)s')
     ConsoleOutputHandler.setFormatter(formatter)
     logger.addHandler(ConsoleOutputHandler)
     logger.setLevel(logging.INFO)
-    shutil.make_archive(parentProjectPath + os.sep + name, "zip", targetPath, logger=logger)
-    print('RiskQuantLib project packaged!')
+    zipAS = parentDirectory + os.sep + name
+    try:
+        if os.path.isdir(targetPath) and not keepTop:
+            shutil.make_archive(zipAS, "zip", targetPath, logger=logger)
+            print(f'RiskQuantLib module packaged: {targetPath}')
+        elif os.path.isfile(targetPath) or keepTop:
+            shutil.make_archive(zipAS, "zip", parentDirectory, os.path.basename(targetPath), logger=logger)
+            print(f'RiskQuantLib module packaged: {targetPath}')
+        else:
+            raise FileExistsError(f'Target does not exist: {targetPath}')
+    except Exception as e:
+        failedFile = zipAS + '.zip'
+        os.remove(failedFile) if os.path.isfile(failedFile) else None
+        raise e
 
-def checkAndCreateTemplatePath():
+def checkAndCreateLibraryPath(moduleName: tuple = ('Template', 'Model', 'Tool')):
     """
-    checkAndCreateTemplatePath() is a function to check whether the Template path exists.
+    checkAndCreateLibraryPath() is a function to check whether the Template path exists.
+
+    Parameters
+    ----------
+    moduleName : tuple
+        The parameter tells how many sub-categories the library has. By default, it has Template, Model and Tool.
 
     Returns
     -------
@@ -348,26 +377,40 @@ def checkAndCreateTemplatePath():
     """
     import os
     RiskQuantLibDirectory = os.path.abspath(__file__).split('RiskQuantLib'+os.sep+'__init__')[0]
-    sourcePath = os.path.abspath(RiskQuantLibDirectory) + os.sep + r'RQLTemplate'
-    if os.path.exists(sourcePath):
-        pass
-    else:
-        os.makedirs(sourcePath)
-    return sourcePath
+    RiskQuantLibDirectoryABS = os.path.abspath(RiskQuantLibDirectory) + os.sep + 'RQL'
+    modulePath = tuple(RiskQuantLibDirectoryABS + os.sep + i for i in moduleName)
+    [None if os.path.exists(s) else os.makedirs(s) for s in modulePath]
+    return moduleName, modulePath, RiskQuantLibDirectoryABS
 
-def addProjectTemplate(targetPath:str = '', targetName:str = ''):
+def checkModuleCategory(moduleCategory: str = ''):
+    """This function will check the parameter value of moduleCategory is validated or not."""
+    import os
+    _, _, RiskQuantLibDirectoryABS = checkAndCreateLibraryPath()
+    moduleCategoryName = moduleCategory[0].upper() + moduleCategory[1:]
+    sourcePath = RiskQuantLibDirectoryABS + os.sep + moduleCategoryName
+    if not os.path.exists(sourcePath):
+        existCategory = [i.lower() for i in os.listdir(RiskQuantLibDirectoryABS) if os.path.isdir(RiskQuantLibDirectoryABS+os.sep+i)]
+        raise ValueError('No sub-category of RiskQuantLib library named as: ', moduleCategory, 'Existed categories are: ', existCategory)
+    else:
+        return moduleCategoryName, sourcePath
+
+def addModule(moduleCategory: str = '', targetPath:str = '', targetName:str = ''):
     """
-    addProjectTemplate() is a function to add a RiskQuantLib project '.zip' file to library.
+    addModule() is a function to add a RiskQuantLib module '.zip' file to library.
 
     Use terminal command 'addRQL' to use this function.
-    The terminal command 'addRQL' accept a parameter 'targetPathString',
-    which is the RiskQuantLib project '.zip' file path that you want to add to library.
-    It have to be a '.zip' file to be added to library.
+
+    The terminal command 'addRQL' accept two parameters: 'moduleCategory' and 'targetPathString'.
+    'moduleCategory' is the sub-category of your library, by default, it can be template, model or tool.
+    'targetPathString' is the RiskQuantLib module '.zip' file path that you want to add to library.
+    It has to be a '.zip' file to be added to library.
 
     Parameters
     ----------
+    moduleCategory : str
+        A terminal command parameter, specify the library sub-category you want to add '.zip' file into.
     targetPath : str
-        A terminal command parameter, specify the RiskQuantLib project '.zip' file path which you want to add to library.
+        A terminal command parameter, specify the RiskQuantLib module '.zip' file path which you want to add to library.
     targetName : str
         The name you want to use to save the .zip file as, it is not necessary to add .zip behind it.
 
@@ -375,174 +418,216 @@ def addProjectTemplate(targetPath:str = '', targetName:str = ''):
     -------
     None
     """
-    if targetPath == '' and targetName == '':
+    if moduleCategory == '' and targetPath == '' and targetName == '':
         parser = argparse.ArgumentParser()
-        parser.add_argument("target", type=str, help="the zipped RiskQuantLib project file you want to add into RiskQuantLib library")
+        parser.add_argument("category", type=str, help="the sub-category of your library where you want to add module into")
+        parser.add_argument("target", type=str, help="the zipped module file you want to add into RiskQuantLib library")
         parser.add_argument("-n", "--name", type=str, help="the name which you want to store the .zip file as")
         args = parser.parse_args()
+        moduleCategory = args.category
         targetPath = args.target
         targetName = args.name if args.name else ''
 
-    import os, shutil
-    projectPackPath = os.path.splitext(targetPath)[0]
-
-    if targetName=='':
-        name = projectPackPath.split(os.sep)[-1]
+    import os
+    moduleCategoryName, sourcePath = checkModuleCategory(moduleCategory)
+    if targetName == '':
+        modulePackPath = os.path.splitext(targetPath)[0]
+        name = modulePackPath.split(os.sep)[-1]
     else:
         nameList = targetName.split('.')
-        if len(nameList)>1:
+        if len(nameList) > 1:
             name = "".join(nameList[0:-1])
         else:
             name = nameList[0]
-    sourcePath = checkAndCreateTemplatePath()
+    import shutil
     shutil.copy(targetPath,sourcePath+os.sep+name+'.zip')
     os.remove(targetPath)
-    print('RiskQuantLib project template added!')
+    print(f'RiskQuantLib module added: {moduleCategoryName} -> {name}')
 
-def saveProject(targetPath:str = '', targetName:str = ''):
+
+def saveModule(moduleCategory: str = '', targetPath: str = '', targetName: str = ''):
     """
-    saveProject() is a function to save a RiskQuantLib project and add it to library.
+    saveModule() is a function to save a RiskQuantLib module and add it to library.
 
     Use terminal command 'saveRQL' to use this function.
-    The terminal command 'saveRQL' accept a parameter 'targetPathString',
-    which is the RiskQuantLib project path that you want to save,
-    and an optional parameter 'projectName',
-    which is the name you want to give to this project.
-    After calling this function, a '.zip' file will be created in RiskQuantLib project directory,
-    and this project will be stored as a template.
+    The terminal command 'saveRQL' accept two parameters: 'moduleCategory' and 'targetPath'.
+    'moduleCategory' is the sub-category of your library where you want to save file into,
+    by default, it can be template, model or tool.
+    'targetPath' is the file or directory path that you want to save.
+    There is also an optional parameter 'targetName',
+    which is the name you want to give to this module.
+    After calling this function, a '.zip' file will be created in the target directory,
+    and this file will be stored as a module.
 
     Parameters
     ----------
+    moduleCategory : str
+        A terminal command parameter, specify the library sub-category you want to save '.zip' file into.
     targetPath : str
-        A terminal command parameter, specify the RiskQuantLib project path which you want to save as template.
+        A terminal command parameter, specify the file or directory path which you want to save as template.
     targetName : str
-        A terminal command parameter, specify the name you want to save this project as.
+        A terminal command parameter, specify the name you want to save this module as.
 
     Returns
     -------
     None
     """
-    if targetPath == '' and targetName == '':
+    if moduleCategory == '' and targetPath == '' and targetName == '':
         parser = argparse.ArgumentParser()
-        parser.add_argument("target", type=str, help="the path of RiskQuantLib project which you want to save into RiskQuantLib library")
-        parser.add_argument("-n", "--name", type=str, help="the name which you want to store the RiskQuantLib project as")
+        parser.add_argument("category", type=str, help="the sub-category of your library where you want to save module into")
+        parser.add_argument("target", type=str, help="the path of file or directory which you want to save into RiskQuantLib library")
+        parser.add_argument("-n", "--name", type=str, help="the name which you want to store the module as")
         args = parser.parse_args()
+        moduleCategory = args.category
         targetPath = args.target
         targetName = args.name if args.name else ''
 
     import os
-
+    checkModuleCategory(moduleCategory)
     parentDir = os.path.dirname(targetPath)
-    name = targetPath.split(os.sep)[-1] if targetName == '' else targetName
+    name = os.path.splitext(os.path.basename(targetPath))[0] if targetName == '' else targetName
+    keepTop = False if moduleCategory in {'template', 'Template'} else True
 
-    packProject(targetPath=targetPath,targetName=name)
-    addProjectTemplate(targetPath=parentDir+os.sep+name+'.zip',targetName=name)
+    packModule(targetPath=targetPath, targetName=name, keepTop=keepTop)
+    addModule(moduleCategory=moduleCategory, targetPath=parentDir+os.sep+name+'.zip', targetName=name)
 
-def unpackProject(templateName:str = '', targetPath:str = ''):
+def unpackModule(moduleCategory: str = '', moduleName: str = '', targetPath: str = ''):
     """
-    unpackProject() is a function to unpack a RiskQuantLib project from library and use it again.
+    unpackModule() is a function to unpack a RiskQuantLib module from library and use it again.
 
     Use terminal command 'tplRQL' to use this function.
-    The terminal command 'tplRQL' accept a parameter 'projectName',
-    which is the project name you want to unpack from library.
-    and a parameter 'targetPathString',
-    which is the path where you want to unpack RiskQuantLib project,
-    After calling this function, the content of existing RiskQuantLib project will be unpacked to the location you choose,
-    and you can start a project at the fundation of this unpakced project.
+    The terminal command 'tplRQL' accept two parameters: 'moduleCategory' and 'moduleName',
+    'moduleCategory' is the sub-category of your library where you want to unpack module from,
+    by default, it can be template, model or tool.
+    'moduleName' is the module name you want to unpack from library.
+    'targetPathString' is the path where you want to unpack RiskQuantLib module into.
+    After calling this function, the content of existing RiskQuantLib module will be unpacked to the location you choose,
+    and you can start a project at the foundation of this un-packed module, or use the functions or models of un-packed module.
 
     Parameters
     ----------
-    templateName : str
-        A terminal command parameter, specify the project name you want to unpack from library.
-
+    moduleCategory : str
+        A terminal command parameter, specify the library sub-category you want to un-pack '.zip' file from.
+    moduleName : str
+        A terminal command parameter, specify the module name you want to unpack from library.
     targetPath : str
-        A terminal command parameter, specify the path where you want to unpack RiskQuantLib project.
+        A terminal command parameter, specify the path where you want to un-pack module into.
 
     Returns
     -------
     None
     """
-    if templateName == '' and targetPath == '':
+    if moduleCategory == '' and moduleName == '' and targetPath == '':
         parser = argparse.ArgumentParser()
-        parser.add_argument("template", type=str, help="the name of saved RiskQuantLib project")
-        parser.add_argument("target", type=str, help="the path where you want to unpack the template project into")
+        parser.add_argument("category", type=str, help="the sub-category of your library where you want to un-pack module from")
+        parser.add_argument("module", type=str, help="the name of saved RiskQuantLib module")
+        parser.add_argument("target", type=str, help="the path where you want to unpack the module into")
         args = parser.parse_args()
-        templateName = args.template
+        moduleCategory = args.category
+        moduleName = args.module
         targetPath = args.target
 
+    import os
+    moduleCategoryName, sourcePath = checkModuleCategory(moduleCategory)
+
     # use index number to locate template
-    if str.isdigit(templateName):
-        import os
-        sourcePath = checkAndCreateTemplatePath()
-        projectNameDict = {idx:i.replace('.zip', '') for idx, i in enumerate(os.listdir(sourcePath))}
-        templateIndex = int(templateName)
-        templateName = projectNameDict[templateIndex] if templateIndex in projectNameDict else templateName
+    if str.isdigit(moduleName):
+        moduleNameDict = {idx:i.replace('.zip', '') for idx, i in enumerate(os.listdir(sourcePath))}
+        templateIndex = int(moduleName)
+        moduleName = moduleNameDict[templateIndex] if templateIndex in moduleNameDict else moduleName
 
-    import sys,os,shutil
-    RiskQuantLibDirectory = os.path.abspath(__file__).split('RiskQuantLib'+os.sep+'__init__')[0]
-    sourcePath = os.path.abspath(RiskQuantLibDirectory)+os.sep+r'RQLTemplate'
-    shutil.unpack_archive(sourcePath+os.sep+templateName+'.zip',targetPath,"zip")
-    if os.path.exists(targetPath+os.sep+templateName+'.zip'):
-        os.remove(targetPath+os.sep+templateName+'.zip')
-    print('RiskQuantLib project template '+templateName+' unpack finished!')
+    # change targetPath
+    targetPath = targetPath + os.sep + 'RiskQuantLib' + os.sep + 'Model' if moduleCategoryName == 'Model' else targetPath + os.sep + 'RiskQuantLib' + os.sep + 'Tool' if moduleCategoryName == 'Tool' else targetPath
+    os.makedirs(targetPath) if not os.path.exists(targetPath) else None
 
-def listProjectTemplate():
+    import shutil
+    shutil.unpack_archive(sourcePath+os.sep+moduleName+'.zip',targetPath,"zip")
+    if os.path.exists(targetPath+os.sep+moduleName+'.zip'):
+        os.remove(targetPath+os.sep+moduleName+'.zip')
+    print(f'RiskQuantLib module unpack finished: {moduleCategoryName} -> {moduleName}')
+
+def listItem(hints: str, itemList: list):
+    print(hints)
+    print("".join(['-' for i in range(len(hints))]))
+    [print(index,"->",name) for index,name in enumerate(itemList)]
+
+def listModule(moduleCategory: str = ''):
     """
-    listProjectTemplate() is a function to show all RiskQuantLib projects from library.
+    listModule() is a function to show all RiskQuantLib modules from library.
 
     Use terminal command 'listRQL' to use this function.
 
+    Parameters
+    ----------
+    moduleCategory : str
+        A terminal command parameter, specify the library sub-category you want to show.
+
     Returns
     -------
     None
     """
+    if moduleCategory == '':
+        parser = argparse.ArgumentParser()
+        parser.add_argument("-c", "--category", type=str, help="the sub-category of your library that you want to show")
+        args = parser.parse_args()
+        moduleCategory = args.category if args.category else ''
     import os
-    sourcePath = checkAndCreateTemplatePath()
-    projectNameList = [i.replace('.zip','') for i in os.listdir(sourcePath)]
-    hints = "Show all RiskQuantLib template projects:"
-    print(hints)
-    print("".join(['-' for i in range(len(hints))]))
-    [print(index,"->",name) for index,name in enumerate(projectNameList)]
+    _, _, RiskQuantLibDirectoryABS = checkAndCreateLibraryPath()
+    moduleCategoryList = [i for i in os.listdir(RiskQuantLibDirectoryABS) if os.path.isdir(RiskQuantLibDirectoryABS+os.sep+i)] if moduleCategory == '' else [moduleCategory[0].upper() + moduleCategory[1:]]
+    sourcePathList = [(i, RiskQuantLibDirectoryABS + os.sep + i) for i in moduleCategoryList]
+    moduleFileList = [(moduleCategoryName, [i.replace('.zip','') for i in os.listdir(sourcePath)]) for moduleCategoryName, sourcePath in sourcePathList if os.path.isdir(sourcePath)]
+    [listItem(f"\nShow all RiskQuantLib {moduleCategoryName}:", moduleFile) for moduleCategoryName, moduleFile in moduleFileList]
 
-def delProjectTemplate(targetName:str = ''):
+def deleteModule(moduleCategory: str = '', targetName: str = ''):
     """
-    delProject() is a function to delete a RiskQuantLib project from library.
+    deleteModule() is a function to delete a RiskQuantLib module from library.
 
     Use terminal command 'delRQL' to use this function.
-    The terminal command 'delRQL' accept a parameter 'projectName',
-    which is the project name you want to delete from library.
-    After calling this function, the existing RiskQuantLib project will be removed from library.
+    The terminal command 'delRQL' accept two parameters: 'moduleCategory' and 'targetName'.
+    'moduleCategory' is the sub-category of your library where you want to delete module from,
+    by default, it can be template, model or tool.
+    'targetName' is the module name you want to delete.
+    After calling this function, the existing RiskQuantLib module will be removed from library.
 
     Parameters
     ----------
+    moduleCategory : str
+        A terminal command parameter, specify the library sub-category you want to delete module from.
     targetName : str
-        A terminal command parameter, specify the project name you want to delete from library.
+        A terminal command parameter, specify the module name you want to delete from library.
 
     Returns
     -------
     None
     """
-    if targetName == '':
+    if moduleCategory == '' and targetName == '':
         parser = argparse.ArgumentParser()
-        parser.add_argument("targetName", type=str, help="the name of template project which you saved in RiskQuantLib library")
+        parser.add_argument("category", type=str, help="the sub-category of your library where you want to delete module from")
+        parser.add_argument("target", type=str, help="the name of module which you will delete")
         args = parser.parse_args()
-        targetName = args.targetName
+        moduleCategory = args.category
+        targetName = args.target
 
     import os
-    sourcePath = checkAndCreateTemplatePath()
-    projectNameList = [i.replace('.zip','') for i in os.listdir(sourcePath)]
-    if targetName in projectNameList:
+    moduleCategoryName, sourcePath = checkModuleCategory(moduleCategory)
+    # use index number to locate template
+    if str.isdigit(targetName):
+        moduleNameDict = {idx: i.replace('.zip', '') for idx, i in enumerate(os.listdir(sourcePath))}
+        templateIndex = int(targetName)
+        targetName = moduleNameDict[templateIndex] if templateIndex in moduleNameDict else targetName
+    moduleNameList = [i.replace('.zip','') for i in os.listdir(sourcePath)]
+    if targetName in moduleNameList:
         os.remove(sourcePath+os.sep+targetName+'.zip')
-        print("Delete RiskQuantLib project succeeded: ",targetName)
+        print(f"Delete RiskQuantLib module succeeded: {moduleCategoryName} -> {targetName}")
     else:
-        print("There is no RiskQuantLib project named as: ",targetName)
+        print(f"There is no RiskQuantLib module: {moduleCategoryName} -> {targetName}")
 
-def clearAllProjectTemplate():
+def clearAllModule():
     """
-    clearAllProjectTemplate() is a function to delete all RiskQuantLib projects from library.
+    clearAllModule() is a function to delete all RiskQuantLib modules from library.
 
     Use terminal command 'clearRQL' to use this function.
-    After calling this function, all existing RiskQuantLib projects will be removed.
+    After calling this function, all existing RiskQuantLib modules will be removed.
 
     Returns
     -------
@@ -553,14 +638,123 @@ def clearAllProjectTemplate():
         return None
     else:
         import os
-        sourcePath = checkAndCreateTemplatePath()
-        projectNameList = [i.replace('.zip','') for i in os.listdir(sourcePath)]
-        [os.remove(sourcePath+os.sep+targetName+'.zip') for targetName in projectNameList]
-        print("Delete all RiskQuantLib project templates finished!")
+        _, _, RiskQuantLibDirectoryABS = checkAndCreateLibraryPath()
+        absPathList = [(i, RiskQuantLibDirectoryABS + os.sep + i) for i in os.listdir(RiskQuantLibDirectoryABS)]
+        sourcePathList = [(n, p) for n, p in absPathList if os.path.isdir(p)]
+        for moduleCategory, sourcePath in sourcePathList:
+            moduleNameList = [i.replace('.zip','') for i in os.listdir(sourcePath)]
+            [os.remove(sourcePath+os.sep+targetName+'.zip') for targetName in moduleNameList]
+            print(f"Delete all RiskQuantLib module finished: {moduleCategory}")
 
-def addProjectTemplateFromGithub(targetGithub:str = ''):
+def setDefaultModule(moduleCategory: str = '', moduleName: str = ''):
     """
-    addProjectTemplateFromGithub() is a function to download template from Github to local disk.
+    setDefaultModule() is a function to set a module into default initialization one.
+
+    Use terminal command 'dftRQL' to use this function.
+    The terminal command 'dftRQL' accept two parameters: 'moduleCategory' and 'moduleName'.
+    'moduleCategory' is the sub-category of your library where you want to set module as default from,
+    by default, it can be model or tool.
+    'moduleName' is the module name you want to set as default one.
+    After calling this function, the existing RiskQuantLib module will be set as default, which means every new
+    RiskQuantLib project created by 'newRQL' command will use this module.
+
+    Parameters
+    ----------
+    moduleCategory : str
+        A terminal command parameter, specify the library sub-category you want to set module as default from.
+    moduleName : str
+        A terminal command parameter, specify the module name you want to set as default.
+
+    Returns
+    -------
+    None
+    """
+    if moduleCategory == '' and moduleName == '':
+        parser = argparse.ArgumentParser()
+        parser.add_argument("category", type=str, help="the sub-category of your library where you want to set module as default from")
+        parser.add_argument("module", type=str, help="the name of module which you will set as default")
+        args = parser.parse_args()
+        moduleCategory = args.category
+        moduleName = args.module
+
+    import os
+    defaultCategory = {'Model', 'Tool'}
+    moduleCategoryName = moduleCategory[0].upper() + moduleCategory[1:]
+    if moduleCategoryName not in defaultCategory:
+        raise ValueError('Given sub-category is not supported to set default value: ', moduleCategory, 'Current supported sub-category of default is: ', [i.lower() for i in defaultCategory])
+    else:
+        RiskQuantLibDirectory = os.path.abspath(__file__).split('RiskQuantLib' + os.sep + '__init__')[0]
+        targetPath = os.path.abspath(RiskQuantLibDirectory)
+        unpackModule(moduleCategory, moduleName, targetPath)
+
+def removeDefaultModule(moduleCategory: str = '', moduleName: str = ''):
+    """
+    setDefaultModule() is a function to remove a module from default initialization.
+
+    Use terminal command 'udftRQL' to use this function.
+    The terminal command 'udftRQL' accept two parameters: 'moduleCategory' and 'moduleName'.
+    'moduleCategory' is the sub-category of your library where you want to remove module from,
+    by default, it can be model or tool.
+    'moduleName' is the module name you want to set as default one.
+    After calling this function, the RiskQuantLib module will be removed from default, which means every new
+    RiskQuantLib project created by 'newRQL' command will not use this module anymore.
+
+    Parameters
+    ----------
+    moduleCategory : str
+        A terminal command parameter, specify the library sub-category you want to remove module from.
+    moduleName : str
+        A terminal command parameter, specify the module name you want to remove from default.
+
+    Returns
+    -------
+    None
+    """
+    if moduleCategory == '' and moduleName == '':
+        parser = argparse.ArgumentParser()
+        parser.add_argument("category", type=str, help="the sub-category of your library where you want to remove module from")
+        parser.add_argument("module", type=str, help="the name of module which you will remove from default")
+        args = parser.parse_args()
+        moduleCategory = args.category
+        moduleName = args.module
+
+    import os, shutil
+    defaultCategory = {'Model', 'Tool'}
+    moduleCategoryName = moduleCategory[0].upper() + moduleCategory[1:]
+    if moduleCategoryName not in defaultCategory:
+        raise ValueError('Given sub-category is not supported to remove default value: ', moduleCategory, 'Current supported sub-category of default is: ', [i.lower() for i in defaultCategory])
+    else:
+        RiskQuantLibDirectory = os.path.abspath(__file__).split('RiskQuantLib' + os.sep + '__init__')[0]
+        sourcePath = os.path.abspath(RiskQuantLibDirectory) + os.sep + 'RiskQuantLib' + os.sep + moduleCategoryName
+        modulePath = sourcePath + os.sep + moduleName
+        if not os.path.exists(modulePath):
+            moduleList = [i for i in os.listdir(sourcePath)]
+            moduleDict = {os.path.splitext(i)[0]: i for i in moduleList}
+            moduleName = moduleDict[moduleName] if moduleName in moduleDict else moduleName
+            modulePath = sourcePath + os.sep + moduleName
+        saveModule(moduleCategory, modulePath)
+        shutil.rmtree(modulePath) if os.path.isdir(modulePath) else os.remove(modulePath)
+        print(f'RiskQuantLib module removed from default: {moduleCategoryName} -> {moduleName}')
+
+def initDefaultModule():
+    """This function is used to initialize default module when installing or upgrading RiskQuantLib."""
+    initialModule = [
+    ('model', 'Copula'), ('model', 'KMV'), 
+    ('tool', 'excelTool'), ('tool', 'frameTool'), 
+    ('tool', 'guiTool'), ('tool', 'mailTool'), 
+    ('tool', 'pptTool'), ('tool', 'stringTool'), 
+    ('tool', 'threadTool'), ('tool', 'wordTool')
+    ]
+    for moduleCategory, moduleName in initialModule:
+        try:
+            removeDefaultModule(moduleCategory, moduleName)
+        except Exception as e:
+            print(f'RiskQuantLib default module initialization failed: {moduleCategory} -> {moduleName}')
+
+
+def addModuleFromGithub(targetGithub:str = ''):
+    """
+    addModuleFromGithub() is a function to download template from Github to local disk.
     Use terminal command 'getRQL' to use this function.
     After this function is called, the target repository will be saved as template project.
 
@@ -579,14 +773,16 @@ def addProjectTemplateFromGithub(targetGithub:str = ''):
         args = parser.parse_args()
         targetGithub = args.targetGithub
 
-    sourcePath = checkAndCreateTemplatePath()
+    import os
+    _, _, RiskQuantLibDirectoryABS = checkAndCreateLibraryPath()
+    sourcePath = RiskQuantLibDirectoryABS + os.sep + 'Template'
     from RiskQuantLib.Tool.githubTool import Github
     link = Github()
     link.downloadRepositories(targetGithub,sourcePath)
 
-def receiveProjectTemplate(targetPath:str = ''):
+def receiveModule(targetPath: str = ''):
     """
-    receiveProjectTemplate() is a function to receive any file or directory from your friend by
+    receiveModule() is a function to receive any file or directory from your friend by
     LOCAL AREA NETWORK (LAN).
 
     Use terminal command 'recvRQL' to use this function. You can also specify a path where your want to
@@ -617,9 +813,9 @@ def receiveProjectTemplate(targetPath:str = ''):
     receive = fileReceiver(targetPath)
     receive.run()
 
-def sendProjectTemplate(targetPath:str = ''):
+def sendModule(targetPath: str = '') -> None:
     """
-    sendProjectTemplate() is a function to send any file or directory to your friend by
+    sendModule() is a function to send any file or directory to your friend by
     LOCAL AREA NETWORK (LAN).
 
     Use terminal command 'sendRQL targetProjectPath' or 'sendRQL targetFilePath' to use this function. If
@@ -647,20 +843,20 @@ def sendProjectTemplate(targetPath:str = ''):
     import os
     from RiskQuantLib.Tool.fileTool import fileSender
     if os.path.isdir(targetPath):
-        packProject(targetPath=targetPath)
+        packModule(targetPath=targetPath)
         name = targetPath.split(os.sep)[-1]
-        parentProjectPath = os.path.dirname(targetPath)
-        filePath = parentProjectPath + os.sep + name + ".zip"
+        parentModulePath = os.path.dirname(targetPath)
+        filePath = parentModulePath + os.sep + name + ".zip"
         send = fileSender(filePath)
         send.run()
-        os.remove(parentProjectPath + os.sep + name + '.zip')
+        os.remove(parentModulePath + os.sep + name + '.zip')
     else:
         filePath = targetPath
         send = fileSender(filePath)
         send.run()
 
 
-def buildProject(targetPath:str = '', renderFromPath:str = '', channel:str = '', debug:bool = False):
+def buildProject(targetPath:str = '', renderFromPath:str = '', channel:str = '', debug: bool = False, force: bool = False):
     """
     buildProject() is a function to build RiskQuantLib project.
 
@@ -689,6 +885,13 @@ def buildProject(targetPath:str = '', renderFromPath:str = '', channel:str = '',
         specified class. This mode is useful when your code is still under development. You will not have to change between
         ./Src/somecode.py and target instrument class .py file to edit any code error. The break point will stop right
         under ./Src/somecode.py.
+    force : bool
+        If True, the cached building file buildInfo.pkl will be neglected, a new builder object will be created.
+        This is useful when there are some mistakes in buildInfo.pkl, or error happens when caching buildInfo.pkl.
+        In these cases, old buildInfo.pkl exists but can not be used. The traditional way to solve this problem is manually
+        deleting this file and build whole project again. With this parameter specified as True, users can choose to build
+        project no matter buildInfo.pkl exists or not. However, any information in old building will be deleted. If you use
+        guardian projects, there could be problems, you will have to build all guardian projects again.
 
     Returns
     -------
@@ -701,19 +904,21 @@ def buildProject(targetPath:str = '', renderFromPath:str = '', channel:str = '',
         parser.add_argument("-r","--renderFromPath", type=str, help="the directory of source code where the template code exists")
         parser.add_argument("-c", "--channel", type=str, help="if given a channel name, render action in this channel will not delete the result of render in other channel unless it is overwritten by current render")
         parser.add_argument("-d", "--debug", help="use debug mode, break point in Src will start to effect", action="store_true")
+        parser.add_argument("-f", "--force", help="force to build, cached building information will be neglected", action="store_true")
         args = parser.parse_args()
         targetPath = args.targetPath
         renderFromPath = args.renderFromPath
         channel = args.channel
         debug = args.debug
+        force = args.force
 
     import os
     renderFromPath = renderFromPath if renderFromPath else (targetPath + os.sep + "Src")
     bindType = channel if channel else 'renderedSourceCode'
     rqlPath, configFilePath, buildCachePath = parseBuildPath(targetPath, checkExist=True)
-    buildProjectFromConfig(targetPath, buildCachePath, configFilePath, renderFromPath, bindType, debug)
+    buildProjectFromConfig(targetPath, buildCachePath, configFilePath, renderFromPath, bindType, debug, force)
 
-def autoBuildProject(targetPath:str = '', renderFromPath:str = '', channel:str = '', debug:bool = False):
+def autoBuildProject(targetPath:str = '', renderFromPath:str = '', channel:str = '', debug: bool = False, force: bool = False):
     """
     autoBuildProject() is a function to build RiskQuantLib project. This function keeps
     running until catch a KeyboardInterrupt Exception.
@@ -740,6 +945,15 @@ def autoBuildProject(targetPath:str = '', renderFromPath:str = '', channel:str =
         specified class. This mode is useful when your code is still under development. You will not have to change between
         ./Src/somecode.py and target instrument class .py file to edit any code error. The break point will stop right
         under ./Src/somecode.py.
+    force : bool
+        If True, the cached building file buildInfo.pkl will be deleted, a new builder object will be created.
+        This is useful when there are some mistakes in buildInfo.pkl, or error happens when caching buildInfo.pkl.
+        In these cases, old buildInfo.pkl exists but can not be used. If this parameter is specified as True, buildInfo.pkl
+        will be deleted before auto-building. However, any information in old building will be deleted. If you use
+        guardian projects, there could be problems, you will have to build all guardian projects again. Another thing to
+        notice is the action of parameter force in autoBuildProject is different with that in buildProject or persistProject.
+        buildInfo.pkl will be neglected in buildProject and persistProject, but will be deleted for a single time before
+        auto-building.
 
     Returns
     -------
@@ -751,23 +965,29 @@ def autoBuildProject(targetPath:str = '', renderFromPath:str = '', channel:str =
         parser.add_argument("-r", "--renderFromPath", type=str, help="the directory of source code where the template code exists")
         parser.add_argument("-c", "--channel", type=str, help="if given a channel name, render action in this channel will not delete the result of render in other channel unless it is overwritten by current render")
         parser.add_argument("-d", "--debug", help="use debug mode, break point in Src will start to effect", action="store_true")
+        parser.add_argument("-f", "--force", help="force to build, cached building information will be neglected", action="store_true")
         args = parser.parse_args()
         targetPath = args.targetPath
         renderFromPath = args.renderFromPath
         channel = args.channel
         debug = args.debug
+        force = args.force
 
     import os
     renderFromPath = renderFromPath if renderFromPath else (targetPath + os.sep + "Src")
     bindType = channel if channel else 'renderedSourceCode'
     rqlPath, configFilePath, buildCachePath = parseBuildPath(targetPath, checkExist=True)
 
+    # Delete cached build information if force auto-building
+    os.remove(buildCachePath) if force and os.path.isfile(buildCachePath) else None
+
     # The call back function must be a single parameter function
     def build(projectPath=targetPath):
         try:
-            buildProjectFromConfig(targetPath,buildCachePath,configFilePath,renderFromPath, bindType, debug)
+            buildProjectFromConfig(targetPath,buildCachePath,configFilePath,renderFromPath, bindType, debug, force=False)
         except Exception as e:
-            pass
+            import time
+            print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), "- Build Project Failed: ", e)
 
     from RiskQuantLib.Tool.fileTool import systemWatcher
     watchObj = systemWatcher([configFilePath, renderFromPath], call_back_function_on_any_change=build, withFormat=True, monitorFormat={'.py','.pyt'})
@@ -810,7 +1030,7 @@ def unBuildProject(targetPath:str = ''):
     print("Project un-build finished!")
 
 
-def persistProject(targetPath:str = '', renderFromPath:str = '', channel:str = ''):
+def persistProject(targetPath: str = '', renderFromPath: str = '', channel: str = '', force: bool = False):
     """
     persistProject() is a function to persist RiskQuantLib project.
 
@@ -838,6 +1058,13 @@ def persistProject(targetPath:str = '', renderFromPath:str = '', channel:str = '
     channel : str
         render action in this channel will not delete the result of render in other channel
         unless it is overwritten by current render.
+    force : bool
+        If True, the cached building file buildInfo.pkl will be neglected, a new builder object will be created.
+        This is useful when there are some mistakes in buildInfo.pkl, or error happens when caching buildInfo.pkl.
+        In these cases, old buildInfo.pkl exists but can not be used. The traditional way to solve this problem is manually
+        deleting this file and build whole project again. With this parameter specified as True, users can choose to build
+        project no matter buildInfo.pkl exists or not. However, any information in old building will be deleted. If you use
+        guardian projects, there could be problems, you will have to build all guardian projects again.
 
     Returns
     -------
@@ -848,10 +1075,12 @@ def persistProject(targetPath:str = '', renderFromPath:str = '', channel:str = '
         parser.add_argument("targetPath", type=str, help="the RiskQuantLib project whose code you want to change into permanent")
         parser.add_argument("-r", "--renderFromPath", type=str, help="the directory of source code where the template code exists")
         parser.add_argument("-c", "--channel", type=str, help="if given a channel name, render action in this channel will not delete the result of render in other channel unless it is overwritten by current render")
+        parser.add_argument("-f", "--force", help="force to persist, cached building information will be neglected", action="store_true")
         args = parser.parse_args()
         targetPath = args.targetPath
         renderFromPath = args.renderFromPath
         channel = args.channel
+        force = args.force
 
     import os
     rqlPath, configFilePath, buildCachePath = parseBuildPath(targetPath, checkExist=True)
@@ -860,10 +1089,55 @@ def persistProject(targetPath:str = '', renderFromPath:str = '', channel:str = '
     confirm = input("This action can not be Un-Done or Cancelled, do you confirm to continue? (y/n)")
     if confirm.lower()=='y':
         from RiskQuantLib.Build.builder import configBuilder
-        buildObj = configBuilder.loadInfo(buildCachePath) if os.path.isfile(buildCachePath) else configBuilder(targetProjectPath=targetPath)
+        buildProject(targetPath,renderFromPath,channel,False,force) if not os.path.isfile(buildCachePath) or force else None
+        buildObj = configBuilder.loadInfo(buildCachePath)
         buildObj.persistProject(sourceCodeDirPath=renderFromPath,bindType=bindType)
         configFile = initiateConfigFile()
         configFile.writeToFile(configFilePath)
         print("Project persisted!")
     else:
         print("Action cancelled, nothing changed!")
+
+def copyProject(fromProjectPath: str = '', toProjectPath: str = ''):
+    """
+    copyProject() is a function to copy RiskQuantLib project to another directory.
+
+    Use terminal command 'copyRQL fromProjectPath toProjectPath' to use this function. The project
+    will be copied into the specified directory, if toProjectPath does not exist, it will be created.
+
+    This function will copy every file in current project into new directory except those files which 
+    are under path fromProjectPath/RiskQuantLib. If files with the same name already exist in toProjectPath,
+    then they will be overwritten, so use it carefully.
+
+    Parameters
+    ----------
+    fromProjectPath : str
+        A terminal command parameter, specify the RiskQuantLib project path you want to copy from.
+    toProjectPath : str
+        The path where you want to copy RiskQuantLib project to.
+
+    Returns
+    -------
+    None
+    """
+
+    if fromProjectPath == '' and toProjectPath == '':
+        parser = argparse.ArgumentParser()
+        parser.add_argument("fromProjectPath", type=str, help="the path of RiskQuantLib project which you want to copy files from")
+        parser.add_argument("toProjectPath", type=str, help="the path of RiskQuantLib project which you want to copy files into")
+        args = parser.parse_args()
+        fromProjectPath = args.fromProjectPath
+        toProjectPath = args.toProjectPath
+    
+    import os
+    fromProjectPath = os.path.abspath(fromProjectPath)
+    toProjectPath = os.path.abspath(toProjectPath)
+    if os.path.isdir(fromProjectPath):
+        import shutil
+        newProject(toProjectPath)
+        dirsAndFiles = [(i, fromProjectPath+os.sep+i, toProjectPath+os.sep+i) for i in os.listdir(fromProjectPath)]
+        [shutil.copy(f, t) for i, f, t in dirsAndFiles if os.path.isfile(f)]
+        [shutil.copytree(f, t, dirs_exist_ok=True) for i, f, t in dirsAndFiles if os.path.isdir(f) and i != 'RiskQuantLib']
+        print("Project copied from ", fromProjectPath, " to ", toProjectPath)
+    else:
+        print("You must specify a validated path which you want to copy files from")
